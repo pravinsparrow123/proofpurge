@@ -9,8 +9,12 @@ namespace DataLifecycleEngine.Cli.Commands;
 public class InitCommandSettings : CommandSettings
 {
     [CommandOption("-o|--output <PATH>")]
-    [Description("Destination file path for the starter policy YAML configuration.")]
+    [Description("Destination file path for the retention policy YAML configuration.")]
     public string OutputPath { get; set; } = "retention-policy.yaml";
+
+    [CommandOption("-q|--quick")]
+    [Description("Quick non-interactive mode: creates default placeholder YAML without prompts.")]
+    public bool Quick { get; set; }
 }
 
 public class InitCommand : AsyncCommand<InitCommandSettings>
@@ -19,42 +23,121 @@ public class InitCommand : AsyncCommand<InitCommandSettings>
     {
         if (File.Exists(settings.OutputPath))
         {
-            AnsiConsole.MarkupLine($"[yellow]Notice: Configuration file '{settings.OutputPath}' already exists.[/]");
-            return Task.FromResult(0);
+            bool overwrite = AnsiConsole.Confirm($"[yellow]File '{settings.OutputPath}' already exists. Overwrite?[/]", false);
+            if (!overwrite)
+            {
+                AnsiConsole.MarkupLine("[grey]Setup cancelled.[/]");
+                return Task.FromResult(0);
+            }
         }
 
-        const string sampleYaml = @"# ProofPurge Declarative Retention Policy Configuration
+        string driver = "sqlserver";
+        string connStr = "Server=.\\SQLEXPRESS;Database=LifecycleDemo;Trusted_Connection=True;TrustServerCertificate=True;";
+        string policyName = "purge_inactive_records";
+        string rootTable = "Accounts";
+        string dateColumn = "LastActivityDate";
+        string cutoff = "3y";
+        string whereClause = "Status = 'CLOSED'";
+        string action = "archive_and_purge";
+        string sinkType = "local";
+        string sinkPath = "./archives";
+
+        if (!settings.Quick)
+        {
+            AnsiConsole.Write(
+                new FigletText("ProofPurge Setup")
+                    .Color(Color.DeepSkyBlue1));
+
+            AnsiConsole.Write(new Rule("[yellow]Interactive Step-by-Step Configuration Wizard[/]").LeftJustified());
+            AnsiConsole.MarkupLine("[grey]Configure your database rules interactively below (press Enter to accept suggested defaults):\n[/]");
+
+            // 1. Driver
+            driver = AnsiConsole.Prompt(
+                new SelectionPrompt<string>()
+                    .Title("[bold cyan]1. Select Target Database Engine:[/]")
+                    .AddChoices("sqlserver", "postgres"));
+
+            // 2. Connection String
+            string defaultConnStr = driver == "sqlserver"
+                ? "Server=.\\SQLEXPRESS;Database=LifecycleDemo;Trusted_Connection=True;TrustServerCertificate=True;"
+                : "Host=localhost;Port=5432;Database=LifecycleDemo;Username=postgres;Password=password123;";
+
+            connStr = AnsiConsole.Prompt(
+                new TextPrompt<string>("[bold cyan]2. Enter Database Connection String (or ${ENV_VAR}):[/]")
+                    .DefaultValue(defaultConnStr));
+
+            // 3. Policy Name
+            policyName = AnsiConsole.Prompt(
+                new TextPrompt<string>("[bold cyan]3. Policy Name (e.g. purge_inactive_accounts):[/]")
+                    .DefaultValue("purge_inactive_records"));
+
+            // 4. Root Table
+            rootTable = AnsiConsole.Prompt(
+                new TextPrompt<string>("[bold cyan]4. Root Target Table (Parent table to inspect & purge):[/]")
+                    .DefaultValue("Accounts"));
+
+            // 5. Date Column
+            dateColumn = AnsiConsole.Prompt(
+                new TextPrompt<string>("[bold cyan]5. Date/Timestamp Column to check for age:[/]")
+                    .DefaultValue("LastActivityDate"));
+
+            // 6. Cutoff
+            cutoff = AnsiConsole.Prompt(
+                new TextPrompt<string>("[bold cyan]6. Retention Cutoff Window (e.g. 30d, 90d, 12m, 3y, 7y):[/]")
+                    .DefaultValue("3y"));
+
+            // 7. Filter Predicate
+            whereClause = AnsiConsole.Prompt(
+                new TextPrompt<string>("[bold cyan]7. Filter Condition (WHERE clause, or press Enter for empty):[/]")
+                    .AllowEmpty()
+                    .DefaultValue("Status = 'CLOSED'"));
+
+            // 8. Action
+            action = AnsiConsole.Prompt(
+                new SelectionPrompt<string>()
+                    .Title("[bold cyan]8. Default Purge Action:[/]")
+                    .AddChoices("archive_and_purge", "dry_run", "archive_only"));
+
+            // 9. Storage Sink
+            sinkType = AnsiConsole.Prompt(
+                new SelectionPrompt<string>()
+                    .Title("[bold cyan]9. Cold Storage Sink for Parquet Files:[/]")
+                    .AddChoices("local", "s3", "azure"));
+
+            if (sinkType == "local")
+            {
+                sinkPath = AnsiConsole.Prompt(
+                    new TextPrompt<string>("[bold cyan]   Local Directory Path for Parquet Archives:[/]")
+                        .DefaultValue("./archives"));
+            }
+        }
+
+        string generatedYaml = $@"# ProofPurge Declarative Retention Policy Configuration
 version: ""1.0""
 
-# Target Database Connection
 target_database:
-  driver: ""sqlserver"" # options: 'sqlserver' or 'postgres'
-  connection_string: ""${DB_CONNECTION_STRING}""
+  driver: ""{driver}""
+  connection_string: ""{connStr}""
 
-# Cold Storage Sink for Parquet Archives
 storage_sink:
-  type: ""local"" # options: 'local', 's3', or 'azure'
-  local_path: ""./archives""
-  compression: ""snappy"" # options: 'snappy', 'zstd', or 'gzip'
+  type: ""{sinkType}""
+  local_path: ""{sinkPath}""
+  compression: ""snappy""
 
-# Zero-Lock Safety Guardrails
 safety_thresholds:
   max_batch_size: 2000
   throttle_pause_ms: 1000
   max_transaction_log_percent: 65.0
   max_replication_lag_seconds: 3
 
-# Data Lifecycle & Cascade Retention Policies
 policies:
-  - name: ""purge_historical_data""
-    description: ""Cold-archive and purge historical data exceeding retention cutoff""
-    root_table: ""Accounts""
-    retention_cutoff: ""3y"" # e.g. 3y (3 years), 90d (90 days), 12m (12 months)
-    date_column: ""CreatedAt""
-    where_clause: ""Status = 'CLOSED'""
-    action: ""archive_and_purge"" # options: dry_run | archive_only | archive_and_purge
-
-    # Cascade foreign key child tables to delete prior to root parent
+  - name: ""{policyName}""
+    description: ""Cold-archive and purge records matching retention cutoff""
+    root_table: ""{rootTable}""
+    retention_cutoff: ""{cutoff}""
+    date_column: ""{dateColumn}""
+    where_clause: ""{whereClause}""
+    action: ""{action}""
     cascade_children:
       - table: ""Orders""
         foreign_key: ""AccountId""
@@ -67,9 +150,26 @@ policies:
         foreign_key: ""AccountId""
 ";
 
-        File.WriteAllText(settings.OutputPath, sampleYaml);
-        AnsiConsole.MarkupLine($"[bold green]✓ Created starter configuration:[/] [cyan]{Path.GetFullPath(settings.OutputPath)}[/]");
-        AnsiConsole.MarkupLine("[grey]Next step: Run 'proofpurge scan -c retention-policy.yaml' to inspect your database schema safely.[/]");
+        File.WriteAllText(settings.OutputPath, generatedYaml);
+
+        AnsiConsole.WriteLine();
+        var panel = new Panel(
+            $"[bold green]✓ Configuration Saved:[/] [cyan]{Path.GetFullPath(settings.OutputPath)}[/]\n\n" +
+            $"[bold]Database Engine:[/] {driver}\n" +
+            $"[bold]Target Table:[/] {rootTable} ({dateColumn} < {cutoff})\n" +
+            $"[bold]Filter Condition:[/] {(string.IsNullOrWhiteSpace(whereClause) ? "[dim]None (All records older than cutoff)[/]" : whereClause)}\n" +
+            $"[bold]Action:[/] {action}\n" +
+            $"[bold]Cold Sink:[/] {sinkType} ({sinkPath})"
+        )
+        {
+            Header = new PanelHeader("[bold green]Setup Complete[/]"),
+            Border = BoxBorder.Rounded
+        };
+        AnsiConsole.Write(panel);
+
+        AnsiConsole.MarkupLine($"\n[bold yellow]Next Step:[/] Run the non-destructive safety scan to inspect your live database:");
+        AnsiConsole.MarkupLine($"[bold cyan]dotnet run --project src/DataLifecycleEngine.Cli -- scan -c {settings.OutputPath}[/]\n");
+
         return Task.FromResult(0);
     }
 }
