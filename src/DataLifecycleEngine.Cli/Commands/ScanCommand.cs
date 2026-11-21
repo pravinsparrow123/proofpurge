@@ -96,6 +96,13 @@ public class ScanCommand : AsyncCommand<ScanCommandSettings>
                     tableGrid.AddColumn("[bold]Size (MB)[/]");
                     tableGrid.AddColumn("[bold]Candidate Purge Rows[/]");
 
+                    DateTime cutoffDate = DataLifecycleEngine.Core.DateHelper.CalculateCutoffDate(policy.RetentionCutoff);
+                    string rootWhere = $"[{policy.DateColumn}] < @Cutoff";
+                    if (!string.IsNullOrWhiteSpace(policy.WhereClause))
+                    {
+                        rootWhere += $" AND ({policy.WhereClause})";
+                    }
+
                     foreach (var tblName in plan.DeletionOrder)
                     {
                         var meta = tables.FirstOrDefault(t => string.Equals(t.TableName, tblName, StringComparison.OrdinalIgnoreCase));
@@ -103,22 +110,19 @@ public class ScanCommand : AsyncCommand<ScanCommandSettings>
                         double sizeMb = (meta?.TotalSizeBytes ?? 0) / (1024.0 * 1024.0);
 
                         long candidateCount = 0;
-                        if (string.Equals(tblName, policy.RootTable, StringComparison.OrdinalIgnoreCase))
+                        try
                         {
-                            try
-                            {
-                                candidateCount = await inspector.GetCandidateCountAsync(
-                                    config.TargetDatabase.ConnectionString,
-                                    meta?.Schema ?? "dbo",
-                                    tblName,
-                                    policy.DateColumn,
-                                    policy.RetentionCutoff,
-                                    policy.WhereClause);
-                            }
-                            catch
-                            {
-                                candidateCount = -1;
-                            }
+                            string countSql = DataLifecycleEngine.Purger.AdaptiveCascadePurger.BuildDryRunCountQuery(tblName, policy, rootWhere);
+                            await using var conn = new Microsoft.Data.SqlClient.SqlConnection(config.TargetDatabase.ConnectionString);
+                            await conn.OpenAsync();
+                            await using var cmd = new Microsoft.Data.SqlClient.SqlCommand(countSql, conn);
+                            cmd.Parameters.Add(new Microsoft.Data.SqlClient.SqlParameter("@Cutoff", System.Data.SqlDbType.DateTime2) { Value = cutoffDate });
+                            var resultObj = await cmd.ExecuteScalarAsync();
+                            candidateCount = Convert.ToInt64(resultObj ?? 0);
+                        }
+                        catch
+                        {
+                            candidateCount = -1;
                         }
 
                         tableGrid.AddRow(
