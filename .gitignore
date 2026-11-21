@@ -22,7 +22,19 @@ bld/
 *.sln.docstates
 .idea/
 
-# SQLite temporary and lock files
+# Parquet archives and cold storage data
+archives/*
+!archives/.gitkeep
+*.parquet
+
+# Generated audit certificates
+audit-certificates/*
+!audit-certificates/.gitkeep
+
+# SQLite runtime checkpoints and lock files
+checkpoints/*.db
+!checkpoints/.gitkeep
+*.db
 *.db-wal
 *.db-shm
 *.db-journal
