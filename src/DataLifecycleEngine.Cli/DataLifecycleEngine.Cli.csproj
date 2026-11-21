@@ -1,0 +1,23 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\DataLifecycleEngine.Core\DataLifecycleEngine.Core.csproj" />
+    <ProjectReference Include="..\DataLifecycleEngine.Catalog\DataLifecycleEngine.Catalog.csproj" />
+    <ProjectReference Include="..\DataLifecycleEngine.Archiver\DataLifecycleEngine.Archiver.csproj" />
+    <ProjectReference Include="..\DataLifecycleEngine.Purger\DataLifecycleEngine.Purger.csproj" />
+    <ProjectReference Include="..\DataLifecycleEngine.Audit\DataLifecycleEngine.Audit.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Spectre.Console" Version="0.57.2" />
+    <PackageReference Include="Spectre.Console.Cli" Version="0.57.2" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>

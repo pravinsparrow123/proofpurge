@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/DataLifecycleEngine.Archiver/DataLifecycleEngine.Archiver.csproj" />
+    <Project Path="src/DataLifecycleEngine.Audit/DataLifecycleEngine.Audit.csproj" />
+    <Project Path="src/DataLifecycleEngine.Catalog/DataLifecycleEngine.Catalog.csproj" />
+    <Project Path="src/DataLifecycleEngine.Cli/DataLifecycleEngine.Cli.csproj" />
+    <Project Path="src/DataLifecycleEngine.Core/DataLifecycleEngine.Core.csproj" />
+    <Project Path="src/DataLifecycleEngine.Purger/DataLifecycleEngine.Purger.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/DataLifecycleEngine.Tests/DataLifecycleEngine.Tests.csproj" />
+  </Folder>
+</Solution>

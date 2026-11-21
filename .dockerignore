@@ -1,0 +1,9 @@
+**/.git
+**/.vs
+**/bin
+**/obj
+archives/**
+checkpoints/**
+audit-certificates/**
+*.user
+*.suo

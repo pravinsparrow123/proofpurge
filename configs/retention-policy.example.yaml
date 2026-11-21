@@ -1,0 +1,35 @@
+version: "1.0"
+target_database:
+  driver: "sqlserver"
+  connection_string: "Server=.\\SQLEXPRESS;Database=LifecycleDemo;Trusted_Connection=True;TrustServerCertificate=True;"
+
+storage_sink:
+  type: "local" # options: local | s3 | azure
+  local_path: "./archives"
+  compression: "snappy"
+
+safety_thresholds:
+  max_batch_size: 2000
+  throttle_pause_ms: 1000
+  max_transaction_log_percent: 65.0
+  max_replication_lag_seconds: 3
+
+policies:
+  - name: "purge_inactive_accounts_and_orders"
+    description: "Archive and safely purge records inactive for > 3 years"
+    root_table: "Accounts"
+    retention_cutoff: "3y"
+    date_column: "LastActivityDate"
+    where_clause: "Status = 'CLOSED'"
+    action: "dry_run" # options: dry_run | archive_only | archive_and_purge | anonymize
+    cascade_children:
+      - table: "Orders"
+        foreign_key: "AccountId"
+        children:
+          - table: "OrderItems"
+            foreign_key: "OrderId"
+          - table: "Shipments"
+            foreign_key: "OrderId"
+      - table: "AuditLogs"
+        foreign_key: "AccountId"
+
