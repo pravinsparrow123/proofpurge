@@ -13,6 +13,9 @@ public static class Program
         {
             config.SetApplicationName("proofpurge");
             
+            config.AddCommand<InitCommand>("init")
+                .WithDescription("Initializes a new starter retention-policy YAML configuration file.");
+
             config.AddCommand<ScanCommand>("scan")
                 .WithDescription("Scans the database schema, validates foreign keys, and computes safe topological deletion order.");
 
