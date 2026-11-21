@@ -39,6 +39,10 @@ checkpoints/*.db
 *.db-shm
 *.db-journal
 
+# User and test YAML scratch files
+my-*.yaml
+test-*.yaml
+
 # OS files
 Thumbs.db
 ehthumbs.db
