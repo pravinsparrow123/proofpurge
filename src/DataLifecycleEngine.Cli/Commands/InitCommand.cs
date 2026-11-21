@@ -15,13 +15,17 @@ public class InitCommandSettings : CommandSettings
     [CommandOption("-q|--quick")]
     [Description("Quick non-interactive mode: creates default placeholder YAML without prompts.")]
     public bool Quick { get; set; }
+
+    [CommandOption("-f|--force")]
+    [Description("Overwrite existing configuration file without prompting.")]
+    public bool Force { get; set; }
 }
 
 public class InitCommand : AsyncCommand<InitCommandSettings>
 {
-    public override Task<int> ExecuteAsync(CommandContext context, InitCommandSettings settings)
+    public override Task<int> ExecuteAsync(CommandContext context, InitCommandSettings settings, System.Threading.CancellationToken cancellationToken)
     {
-        if (File.Exists(settings.OutputPath))
+        if (File.Exists(settings.OutputPath) && !settings.Force)
         {
             bool overwrite = AnsiConsole.Confirm($"[yellow]File '{settings.OutputPath}' already exists. Overwrite?[/]", false);
             if (!overwrite)
@@ -112,12 +116,14 @@ public class InitCommand : AsyncCommand<InitCommandSettings>
             }
         }
 
+        string safeConnStr = connStr.Contains('\\') ? connStr.Replace("\\", "\\\\") : connStr;
+
         string generatedYaml = $@"# ProofPurge Declarative Retention Policy Configuration
 version: ""1.0""
 
 target_database:
   driver: ""{driver}""
-  connection_string: ""{connStr}""
+  connection_string: ""{safeConnStr}""
 
 storage_sink:
   type: ""{sinkType}""
