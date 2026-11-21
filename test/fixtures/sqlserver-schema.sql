@@ -80,46 +80,71 @@ GO
 CREATE NONCLUSTERED INDEX IX_Shipments_OrderId ON dbo.Shipments(OrderId);
 GO
 
--- Seed Sample Data:
--- Insert 500 Accounts (250 active, 250 closed and older than 3 years)
+-- High-Throughput Set-Based Data Seeder (Generates 40,000+ total rows, 20,000+ purge candidates)
 SET NOCOUNT ON;
 
-DECLARE @i INT = 1;
-WHILE @i <= 500
-BEGIN
-    DECLARE @Status NVARCHAR(20) = CASE WHEN @i % 2 = 0 THEN 'CLOSED' ELSE 'ACTIVE' END;
-    DECLARE @ActivityDate DATETIME2 = CASE WHEN @i % 2 = 0 THEN DATEADD(year, -4, SYSUTCDATETIME()) ELSE SYSUTCDATETIME() END;
-    
-    INSERT INTO dbo.Accounts (AccountName, Status, LastActivityDate)
-    VALUES (CONCAT('Customer_', @i), @Status, @ActivityDate);
+-- Clear tables in reverse topological order
+DELETE FROM dbo.OrderItems;
+DELETE FROM dbo.Shipments;
+DELETE FROM dbo.Orders;
+DELETE FROM dbo.AuditLogs;
+DELETE FROM dbo.Accounts;
 
-    DECLARE @AccId INT = SCOPE_IDENTITY();
+DBCC CHECKIDENT ('dbo.Accounts', RESEED, 0);
+DBCC CHECKIDENT ('dbo.Orders', RESEED, 0);
+DBCC CHECKIDENT ('dbo.OrderItems', RESEED, 0);
+DBCC CHECKIDENT ('dbo.Shipments', RESEED, 0);
+DBCC CHECKIDENT ('dbo.AuditLogs', RESEED, 0);
 
-    -- Add Audit Logs
-    INSERT INTO dbo.AuditLogs (AccountId, EventAction, EventTimestamp)
-    VALUES (@AccId, 'ACCOUNT_CREATED', @ActivityDate);
+-- Generate 5,000 Accounts (2,500 CLOSED older than 3 years, 2,500 ACTIVE)
+;WITH Digits AS (
+    SELECT n FROM (VALUES (0),(1),(2),(3),(4),(5),(6),(7),(8),(9)) AS v(n)
+),
+Numbers AS (
+    SELECT ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS Num
+    FROM Digits d1 CROSS JOIN Digits d2 CROSS JOIN Digits d3 CROSS JOIN Digits d4
+)
+INSERT INTO dbo.Accounts (AccountName, Status, LastActivityDate)
+SELECT 
+    CONCAT('Customer_', Num),
+    CASE WHEN Num % 2 = 0 THEN 'CLOSED' ELSE 'ACTIVE' END,
+    CASE WHEN Num % 2 = 0 THEN DATEADD(year, -4, SYSUTCDATETIME()) ELSE SYSUTCDATETIME() END
+FROM Numbers
+WHERE Num <= 5000;
 
-    -- Add 2 Orders per account
-    DECLARE @o INT = 1;
-    WHILE @o <= 2
-    BEGIN
-        INSERT INTO dbo.Orders (AccountId, OrderNumber, TotalAmount, CreatedAt)
-        VALUES (@AccId, CONCAT('ORD-', @AccId, '-', @o), 150.00 * @o, @ActivityDate);
+-- 5,000 AuditLogs (2,500 purge candidates)
+INSERT INTO dbo.AuditLogs (AccountId, EventAction, EventTimestamp)
+SELECT 
+    Id,
+    'ACCOUNT_CREATED',
+    LastActivityDate
+FROM dbo.Accounts;
 
-        DECLARE @OrdId INT = SCOPE_IDENTITY();
+-- 10,000 Orders (2 per account = 5,000 purge candidates)
+INSERT INTO dbo.Orders (AccountId, OrderNumber, TotalAmount, CreatedAt)
+SELECT 
+    a.Id,
+    CONCAT('ORD-', a.Id, '-', o.OrderSeq),
+    150.00 * o.OrderSeq,
+    a.LastActivityDate
+FROM dbo.Accounts a
+CROSS JOIN (VALUES (1), (2)) AS o(OrderSeq);
 
-        -- Add Order Items
-        INSERT INTO dbo.OrderItems (OrderId, ProductName, Quantity, UnitPrice)
-        VALUES (@OrdId, 'Enterprise Widget', 2, 75.00);
+-- 10,000 OrderItems (1 per order = 5,000 purge candidates)
+INSERT INTO dbo.OrderItems (OrderId, ProductName, Quantity, UnitPrice)
+SELECT 
+    Id,
+    'Enterprise Cloud Platform License',
+    2,
+    75.00
+FROM dbo.Orders;
 
-        -- Add Shipment
-        INSERT INTO dbo.Shipments (OrderId, TrackingCode, ShippedDate)
-        VALUES (@OrdId, CONCAT('TRK-', @OrdId), @ActivityDate);
-
-        SET @o = @o + 1;
-    END
-
-    SET @i = @i + 1;
-END
+-- 10,000 Shipments (1 per order = 5,000 purge candidates)
+INSERT INTO dbo.Shipments (OrderId, TrackingCode, ShippedDate)
+SELECT 
+    Id,
+    CONCAT('TRK-', Id),
+    CreatedAt
+FROM dbo.Orders;
 GO
 
