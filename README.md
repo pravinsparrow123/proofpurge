@@ -1,6 +1,7 @@
-# Enterprise Data Lifecycle & Safe Purge Engine
+# ProofPurge
 
-Autonomous, zero-downtime database archiving, foreign-key cascade purging, and compliance audit engine for SQL Server and PostgreSQL.
+> **Enterprise Data Lifecycle & Safe Purge Engine**  
+> Autonomous, zero-downtime database archiving into Apache Parquet, foreign-key cascade purging with real-time log vitals monitoring, and cryptographic compliance audit certificates (GDPR, India DPDP Act 2023, HIPAA).
 
 ---
 

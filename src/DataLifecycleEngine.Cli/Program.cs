@@ -11,7 +11,7 @@ public static class Program
         var app = new CommandApp();
         app.Configure(config =>
         {
-            config.SetApplicationName("safe-purge");
+            config.SetApplicationName("proofpurge");
             
             config.AddCommand<ScanCommand>("scan")
                 .WithDescription("Scans the database schema, validates foreign keys, and computes safe topological deletion order.");
