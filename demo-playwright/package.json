@@ -1,0 +1,14 @@
+{
+  "name": "proofpurge-playwright-demo",
+  "version": "1.0.0",
+  "description": "End-to-end Playwright interactive demo & test suite for ProofPurge Cockpit",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed --slow-mo=600",
+    "test:ui": "playwright test --ui",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0"
+  }
+}

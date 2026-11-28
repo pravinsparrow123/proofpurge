@@ -43,6 +43,11 @@ checkpoints/*.db
 nupkg/
 dist/
 
+# Playwright node_modules and reports
+demo-playwright/node_modules/
+demo-playwright/test-results/
+demo-playwright/playwright-report/
+
 # User and test YAML scratch files
 my-*.yaml
 test-*.yaml

@@ -30,6 +30,9 @@ public static class Program
 
             config.AddCommand<CertifyCommand>("certify")
                 .WithDescription("Issues cryptographically signed compliance audit certificates (PDF/JSON) and verifies tamper-evidence.");
+
+            config.AddCommand<UiCommand>("ui")
+                .WithDescription("Launches the ProofPurge Web Cockpit dashboard for interactive demo and monitoring.");
         });
 
         return await app.RunAsync(args);
