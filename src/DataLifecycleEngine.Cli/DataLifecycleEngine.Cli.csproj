@@ -18,6 +18,12 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <AssemblyName>proofpurge</AssemblyName>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>proofpurge</ToolCommandName>
+    <PackageId>ProofPurge.Cli</PackageId>
+    <Version>1.0.0</Version>
+    <Description>Enterprise Data Lifecycle &amp; Safe Purge Engine CLI</Description>
   </PropertyGroup>
 
 </Project>

@@ -39,6 +39,10 @@ checkpoints/*.db
 *.db-shm
 *.db-journal
 
+# NuGet tool packages & publish outputs
+nupkg/
+dist/
+
 # User and test YAML scratch files
 my-*.yaml
 test-*.yaml

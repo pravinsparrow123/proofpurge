@@ -18,6 +18,9 @@ public class RestoreCommandSettings : CommandSettings
     [CommandOption("-t|--table <TABLE>")]
     public string Table { get; set; } = string.Empty;
 
+    [CommandOption("-s|--schema <SCHEMA>")]
+    public string Schema { get; set; } = "dbo";
+
     [CommandOption("-c|--config <PATH>")]
     public string ConfigPath { get; set; } = "configs/retention-policy.example.yaml";
 }
@@ -43,10 +46,10 @@ public class RestoreCommand : AsyncCommand<RestoreCommandSettings>
         }
 
         var config = PolicyLoader.LoadFromFile(settings.ConfigPath);
-        var storageSink = new LocalStorageSink();
+        var storageSink = StorageSinkFactory.CreateSink(config.StorageSink);
         var restorer = new ParquetRestorer(storageSink);
 
-        AnsiConsole.MarkupLine($"[grey]Target Table:[/] [bold]{settings.Table}[/]");
+        AnsiConsole.MarkupLine($"[grey]Target Table:[/] [bold]{settings.Schema}.{settings.Table}[/]");
         AnsiConsole.MarkupLine($"[grey]Source Archive:[/] [blue]{settings.ArchiveFile}[/]\n");
 
         long restoredCount = 0;
@@ -58,7 +61,7 @@ public class RestoreCommand : AsyncCommand<RestoreCommandSettings>
                     config.TargetDatabase.ConnectionString,
                     settings.ArchiveFile,
                     settings.Table,
-                    "dbo",
+                    settings.Schema,
                     cancellationToken);
             });
 

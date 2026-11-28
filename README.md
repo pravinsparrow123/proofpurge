@@ -10,6 +10,7 @@
 
 ## 📌 Master Documentation & Architecture Manuals
 
+- 📘 **[User Guide (docs/USER_GUIDE.md)](docs/USER_GUIDE.md)**: End-user quickstart guide for installing `proofpurge` locally, setting up rules, archiving, purging, restoring, and verifying certificates.
 - 📖 **[Complete System Architecture & Operator Manual (docs/SYSTEM_DOCUMENTATION.md)](docs/SYSTEM_DOCUMENTATION.md)**: Exhaustive manual detailing all five engineering modules, Mermaid diagrams, algorithmic specifications, configuration schemas, CLI commands, enterprise automation, and pricing.
 - 🧪 **[Manual QA Testing Workflow & Test Plan (docs/MANUAL_TESTING_WORKFLOW.md)](docs/MANUAL_TESTING_WORKFLOW.md)**: Step-by-step QA testing guide with 40,000-record seeded baseline and negative tamper-detection scenarios.
 - 📊 **[Master Development Tasks (docs/DEVELOPMENT_TASKS.md)](docs/DEVELOPMENT_TASKS.md)**: Full project roadmap, phase breakdowns, and verification matrix (100% completed).
